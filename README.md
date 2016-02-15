@@ -6,12 +6,12 @@ This API SmartApp is the first iteration of a restful SmartThings developer API.
 This todo list is a running tally of what needs to be addressed. Please add to this todo list as you see fit.
 
 - [X] Add README
-- [] Use includes directive and try to separate out some code for readability and maintainability
-- [] Use appropriate HTTP methods for operations
-- [] Create a map of settings that allow for the selection of devices to ask the customer for
-- [] a set of case statements will iterate through the map and only reveal the endpoints of approved devices.
-- [] Need to implement general unauthorized scenarios
-- []  I also want to create an endpoint that lists all of a users devices at once
+- [ ] Use includes directive and try to separate out some code for readability and maintainability
+- [ ] Use appropriate HTTP methods for operations
+- [ ] Create a map of settings that allow for the selection of devices to ask the customer for
+- [ ] a set of case statements will iterate through the map and only reveal the endpoints of approved devices.
+- [ ] Need to implement general unauthorized scenarios
+- [ ]  I also want to create an endpoint that lists all of a users devices at once
 
 ## Installation
 TODO
