@@ -194,6 +194,11 @@
         		GET: "listHubs"
         	]
     	}
+        path("/hubs/:id") {
+            action: [
+                GET: "listHubs"
+            ]
+        }
 	    // GET device lists
 	    path("/:deviceType") {
 		    action: [
@@ -227,7 +232,7 @@
             ["firmwareVersionString", "localIP", "localSrvPortTCP", "zigbeeEui", "zigbeeId"].each {
                 result << [(it) : hub."$it"]
             }
-            result << ["type" : hub.type?.name]
+            result << ["type" : hub.type as String]
         }
     	result
 	}
@@ -242,17 +247,11 @@
 		log.debug "in listLocation, location: $location"
 
 		def result = [:]
-		/*result << ["contactBookEnabled" : location.contactBookEnabled]
-    	result << ["id" : location.id]
-        result << ["name" : location.name]
-        result << ["temperatureScale" : location.temperatureScale]
-        result << ["zipCode" : location.zipCode]
-        result << ["latitude" : location.latitude as String]
-    	result << ["longitude" : location.longitude as String] */
-        ["contactBookEnabled", "name", "temperatureScale", "zipCode", "latitude", "longitude"].each {
+        ["contactBookEnabled", "name", "temperatureScale", "zipCode"].each {
             result << [(it) : location."$it"]
         }
-
+        result << ["latitude" : location.latitude as String]
+    	result << ["longitude" : location.longitude as String]
         result << ["timeZone" : location.timeZone?.getDisplayName()]
         result << ["currentMode" : getMode(location.currentMode)]
 
@@ -270,11 +269,20 @@
 	def listHubs() {
 		log.debug "in listHubs, hubs: $location.hubs"
 		def result = []
-    	location.hubs.each {
-    		result << getHub(it)
-    	}
+        def id = params.id
+        if(id) {
+            location.hubs.each {
+                if(it.id == id) {
+                    result << getHub(it, true)
+                }
+            }
+        } else {
+            location.hubs.each {
+                result << getHub(it)
+            }
+        }
     	log.debug "will return: $result"
-    	render contentType: "application/json", statusCode: 200, data: groovy.json.JsonOutput.toJson(result)
+        result
 	}
 
     def listModes() {
@@ -294,7 +302,7 @@
         }
         def id = params.id
         if(id) {
-            def device = settings[type]?.find{it.id == params.id}
+            def device = settings[type]?.find{it.id == id}
         	deviceItem(device, true)
         } else {
 			settings[type]?.collect{deviceItem(it, false)} ?: []
