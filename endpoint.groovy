@@ -1,19 +1,30 @@
 /**
- *  App Endpoint API Access Example
+ *  Copyright 2015 SmartThings
  *
- *  Author: SmartThings - Jody Albritton, Dave Hastings, Jim Anderson
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ *  Developer API
+ *
+ *  Author: SmartThings
  */
 
     import groovy.json.JsonBuilder
     definition(
-        name: "API Endpoint App",
+        name: "Developer API",
         namespace: "smartthings",
         author: "SmartThings",
-        description: "SmartApp API Endpoint ",
+        description: "SmartApp API for developers",
         category: "My Apps",
         iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
         iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png",
-        oauth: [displayName: "API ENDPOINT", displayLink: ""])
+        oauth: [displayName: "SmartThings Developer API", displayLink: ""])
 
     preferences {
         section("Allow Endpoint to Control These Things...") {
@@ -208,14 +219,9 @@
     // hub is non-null
 	def getHub(hub) {
 		def result = [:]
-    	result << ["firmwareVersionString" : hub.firmwareVersionString]
-    	result << ["id" : hub.id]
-    	result << ["localIP" : hub.localIP]
-    	result << ["localSrvPortTCP" : hub.localSrvPortTCP]
-    	result << ["name" : hub.name]
-    	result << ["type" : hub.type]
-    	result << ["zigbeeEui" : hub.zigbeeEui]
-    	result << ["zigbeeId" : hub.zigbeeId]
+        ["firmwareVersionString", "id", "localIP", "localSrvPortTCP", "name", "type", "zigbeeEui", "zigbeeId"].each {
+            result << [(it) : hub."$it"]
+        }
     	return result
 	}
 
@@ -229,18 +235,25 @@
 		log.debug "in listLocation, location: $location"
 
 		def result = [:]
-		result << ["contactBookEnabled" : location.contactBookEnabled]
-    	result << ["currentMode" : getMode(location.currentMode)]
+		/*result << ["contactBookEnabled" : location.contactBookEnabled]
     	result << ["id" : location.id]
+        result << ["name" : location.name]
+        result << ["temperatureScale" : location.temperatureScale]
+        result << ["zipCode" : location.zipCode]
+        result << ["latitude" : location.latitude as String]
+    	result << ["longitude" : location.longitude as String] */
+        ["contactBookEnabled", "name", "temperatureScale", "zipCode", "latitude", "longitude"].each {
+            result << [(it) : location."$it"]
+        }
+
+        result << ["timeZone" : location.timeZone?.getDisplayName()]
+        result << ["currentMode" : getMode(location.currentMode)]
 
     	def hubs = []
     	location.hubs.each {
     		hubs << getHub(it)
     	}
     	result << ["hubs" : hubs]
-
-    	result << ["latitude" : location.latitude as String]
-    	result << ["longitude" : location.longitude as String]
 
     	def modes = []
     	location.modes.each {
@@ -250,13 +263,9 @@
     	log.debug "will add modes: $modes"
     	result << ["modes" : modes]
 
-    	result << ["name" : location.name]
-    	result << ["temperatureScale" : location.temperatureScale]
-    	result << ["timeZone" : location.timeZone?.getDisplayName()]
-    	result << ["zipCode" : location.zipCode]
-
     	log.debug "locations to return: $result"
-    	render contentType: "application/json", statusCode: 200, data: groovy.json.JsonOutput.toJson(result)
+    	//render contentType: "application/json", statusCode: 200, data: groovy.json.JsonOutput.toJson(result)
+        result
 	}
 
 	def listHubs() {
@@ -313,9 +322,9 @@
 	def deviceItem(device, explodedView) {
 		if (!device) return null
    		def results = [:]
-    	results << ["id" : device.id]
-    	results << ["name" : device.name]
-    	results << ["displayName" : device.displayName]
+        ["id", "name", "displayName"].each {
+            results << [(it) : device."$it"]
+        }
 
         if(explodedView) {
     		def attrsAndVals = [:]
