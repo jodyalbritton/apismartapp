@@ -217,18 +217,25 @@
     }
 
     // hub is non-null
-	def getHub(hub) {
+	def getHub(hub, explodedView = false) {
 		def result = [:]
-        ["firmwareVersionString", "id", "localIP", "localSrvPortTCP", "name", "type", "zigbeeEui", "zigbeeId"].each {
+        ["id", "name"].each {
             result << [(it) : hub."$it"]
         }
-    	return result
+
+        if(explodedView) {
+            ["firmwareVersionString", "localIP", "localSrvPortTCP", "zigbeeEui", "zigbeeId"].each {
+                result << [(it) : hub."$it"]
+            }
+            result << ["type" : hub.type?.name]
+        }
+    	result
 	}
 
 	def getMode(mode) {
 		def themode = ["id" : mode.id, "name" : mode.name]
     	log.debug "in getMode will return $themode"
-    	return themode
+    	themode
 	}
 
 	def listLocation() {
@@ -255,14 +262,6 @@
     	}
     	result << ["hubs" : hubs]
 
-    	def modes = []
-    	location.modes.each {
-    		log.debug "MODE: $it"
-    		modes << getMode(it)
-    	}
-    	log.debug "will add modes: $modes"
-    	result << ["modes" : modes]
-
     	log.debug "locations to return: $result"
     	//render contentType: "application/json", statusCode: 200, data: groovy.json.JsonOutput.toJson(result)
         result
@@ -278,9 +277,21 @@
     	render contentType: "application/json", statusCode: 200, data: groovy.json.JsonOutput.toJson(result)
 	}
 
+    def listModes() {
+        def modes = []
+        location.modes.each {
+            log.debug "MODE: $it"
+            modes << getMode(it)
+        }
+        modes
+    }
+
     def list() {
 		log.debug "[PROD] list, params: ${params}"
 		def type = params.deviceType
+        if(!settings[type]) {
+        	httpError(405, "Method Not Allowed")
+        }
         def id = params.id
         if(id) {
             def device = settings[type]?.find{it.id == params.id}
@@ -308,7 +319,10 @@
     def updateDevice() {
     	def type = params.deviceType
         def id = params.id
-    	def command = request.JSON.command
+    	def command = request.JSON?.command
+        if(!command) {
+            httpError(404, "Device not found")
+        }
 
         def device = settings[type]?.find{it.id == params.id}
         if(!device) {
