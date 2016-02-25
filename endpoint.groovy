@@ -188,6 +188,17 @@
         		GET: "listLocation"
         	]
     	}
+        // modes
+        path("/modes") {
+            action: [
+                GET: "listModes"
+            ]
+        }
+        path("/modes/:id") {
+            action: [
+                GET: "listModes"
+            ]
+        }
     	// hub
     	path("/hubs") {
     		action: [
@@ -238,6 +249,7 @@
 	}
 
 	def getMode(mode) {
+        log.debug mode.getProperties()
 		def themode = ["id" : mode.id, "name" : mode.name]
     	log.debug "in getMode will return $themode"
     	themode
@@ -256,7 +268,7 @@
         result << ["currentMode" : getMode(location.currentMode)]
 
     	def hubs = []
-    	location.hubs.each {
+    	location.hubs?.each {
     		hubs << getHub(it)
     	}
     	result << ["hubs" : hubs]
@@ -271,13 +283,13 @@
 		def result = []
         def id = params.id
         if(id) {
-            location.hubs.each {
+            location.hubs?.each {
                 if(it.id == id) {
                     result << getHub(it, true)
                 }
             }
         } else {
-            location.hubs.each {
+            location.hubs?.each {
                 result << getHub(it)
             }
         }
@@ -287,9 +299,17 @@
 
     def listModes() {
         def modes = []
-        location.modes.each {
-            log.debug "MODE: $it"
-            modes << getMode(it)
+        def id = params.id
+        if(id) {
+            location.modes?.each {
+                if(it.id == id) {
+                    modes << getMode(it, true)
+                }
+            }
+        } else {
+            location.modes?.each {
+                modes << getMode(it)
+            }
         }
         modes
     }
@@ -352,10 +372,10 @@
     		def attrsAndVals = [:]
             def commands = []
             log.debug device.getProperties()
-   			device.supportedAttributes.each {
+   			device.supportedAttributes?.each {
        			attrsAndVals << [(it.name) : device.currentValue(it.name)]
     		}
-            device.supportedCommands.each {
+            device.supportedCommands?.each {
             	commands << it.name
             }
 
