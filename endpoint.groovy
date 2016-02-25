@@ -214,21 +214,26 @@
 	    // GET device lists
 	    path("/devices/:deviceType") {
 		    action: [
-			    GET: "list"
+			    GET: "listDevices"
 		    ]
 	    }
         // GET specific device info
         // PUT update the state of a device
         path("/devices/:deviceType/:id") {
             action: [
-            	GET: "list",
-                POST: "updateDevice"
+            	GET: "listDevices",
+            ]
+        }
+        path("/devices/:deviceType/:id/commands") {
+            action: [
+                GET: "listDeviceCommands",
+                POST: "sendDeviceCommand"
             ]
         }
         // GET event lists
         path("/devices/:deviceType/:id/events") {
         	action: [
-            	GET: "listEvents"
+            	GET: "listDeviceEvents"
             ]
         }
     }
@@ -335,8 +340,7 @@
         }
     }
 
-    def list() {
-		log.debug "[PROD] list, params: ${params}"
+    def listDevices() {
 		def type = params.deviceType
         if(!settings[type]) {
         	httpError(405, "Method Not Allowed")
@@ -350,22 +354,42 @@
         }
 	}
 
-    def listEvents() {
+    def listDeviceEvents() {
     	def type = params.deviceType
         def id = params.id
-        def device = settings[type]?.find{it.id == params.id}
+        def device = settings[type]?.find{it.id == id}
 
         if (!device) {
             httpError(404, "Device not found")
         } else {
-            def events = device.events(max: 40)
-            events = events.findAll{it.name == type}
+            log.debug device.getProperties()
+            def events = device.events(max: 20)
             def result = events.collect{item(device, it)}
             result
         }
     }
 
-    def updateDevice() {
+    private item(device, s) {
+        log.debug s.getProperties()
+        device && s ? [device_id: device.id, label: device.displayName, name: s.name, value: s.value, date: s.date, stateChange: s.stateChange, eventSource: s.eventSource] : null
+    }
+
+    def listDeviceCommands() {
+        def type = params.deviceType
+        def id = params.id
+        def device = settings[type]?.find{it.id == id}
+        def commands = []
+        if(!device) {
+            httpError(404, "Device not found")
+        } else {
+            device.supportedCommands?.each {
+                commands << ["command" : it.name, "params"  : [:]]
+            }
+        }
+        commands
+    }
+
+    def sendDeviceCommand() {
     	def type = params.deviceType
         def id = params.id
     	def command = request.JSON?.command
@@ -379,6 +403,7 @@
         } else {
             log.debug "Executing command: $command on device: $device"
             device."$command"()
+            render contentType: "text/html", status: 204, data: "No Content"
         }
     }
 
@@ -391,62 +416,15 @@
 
         if(explodedView) {
     		def attrsAndVals = [:]
-            def commands = []
             log.debug device.getProperties()
    			device.supportedAttributes?.each {
        			attrsAndVals << [(it.name) : device.currentValue(it.name)]
     		}
-            device.supportedCommands?.each {
-            	commands << it.name
-            }
 
     		results << ["attributes" : attrsAndVals]
-            results << ["commands" : commands]
         }
     	results
 	}
-
-    private void update(devices) {
-        log.debug "update, request: params: ${params}, devices: $devices.id"
-
-
-        //def command = request.JSON?.command
-        def command = params.command
-        def level = params.level
-        //let's create a toggle option here
-        if (command)
-        {
-            def device = devices.find { it.id == params.id }
-            if (!device) {
-                httpError(404, "Device not found")
-            } else {
-                if(command == "toggle")
-                {
-                    if(device.currentValue('switch') == "on")
-                      device.off();
-                    else
-                      device.on();
-                }
-                else if(command == "level")
-                {
-                    device.setLevel(level.toInteger())
-                }
-                else if(command == "events")
-                {
-                    device.events(max: 20)
-                }
-
-                else
-                {
-                    device."$command"()
-                }
-            }
-        }
-    }
-
-    private item(device, s) {
-        device && s ? [uid: s.id, device_id: device.id, label: device.displayName, name: s.name, value: s.value, date: s.date] : null
-    }
 
     private device(it, type) {
         it ? [id: it.id, label: it.label, type: type] : null
