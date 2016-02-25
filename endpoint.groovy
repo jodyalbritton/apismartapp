@@ -236,6 +236,18 @@
             	GET: "listDeviceEvents"
             ]
         }
+        // Routines
+        path("/routines") {
+            action: [
+                GET: "listRoutines"
+            ]
+        }
+        path("/routines/:id") {
+            action: [
+                GET: "listRoutines",
+                POST: "executeRoutine"
+            ]
+        }
     }
 
     // hub is non-null
@@ -293,40 +305,39 @@
 
 	def listHubs() {
 		log.debug "in listHubs, hubs: $location.hubs"
-		def result = []
         def id = params.id
         if(id) {
         	def hub = location.hubs?.find{it.id == id}
             if(hub) {
-            	result << getHub(hub, true)
+            	getHub(hub, true)
             } else {
             	httpError(404, "hub not found")
             }
         } else {
+        	def result = []
             location.hubs?.each {
                 result << getHub(it)
             }
+            result
         }
-    	log.debug "will return: $result"
-        result
 	}
 
     def listModes() {
-        def modes = []
         def id = params.id
         if(id) {
         	def themode = location.modes?.find{it.id == id}
             if(themode) {
-            	modes << getMode(themode, true)
+            	getMode(themode, true)
             } else {
             	httpError(404, "mode not found")
             }
         } else {
+        	def modes = []
             location.modes?.each {
                 modes << getMode(it)
             }
+            modes
         }
-        modes
     }
 
     def switchMode() {
@@ -425,6 +436,43 @@
         }
     	results
 	}
+
+    def listRoutines() {
+        def id = params.id
+        def results = []
+        if(id) {
+            def routine = location.helloHome?.getPhrases().find{it.id == id}
+            def myRoutine = [:]
+            if(!routine) {
+                httpError(404, "Routine not found")
+            } else {
+                ["id", "label"].each {
+                    myRoutine << [(it) : routine."$it"]
+                }
+                myRoutine
+            }
+        } else {
+            location.helloHome?.getPhrases().each { routine ->
+                def myRoutine = [:]
+                ["id", "label"].each {
+                    myRoutine << [(it) : routine."$it"]
+                }
+                results << myRoutine
+            }
+            results
+        }
+    }
+
+    def executeRoutine() {
+    	def id = params.id
+        def routine = location.helloHome?.getPhrases().find{it.id == id}
+        if(!routine) {
+        	httpError(404, "Routine not found")
+        } else {
+        	location.helloHome?.execute(routine.label)
+            render contentType: "text/html", status: 204, data: "No Content"
+        }
+    }
 
     private device(it, type) {
         it ? [id: it.id, label: it.label, type: type] : null
