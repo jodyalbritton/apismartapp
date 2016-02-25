@@ -196,7 +196,8 @@
         }
         path("/modes/:id") {
             action: [
-                GET: "listModes"
+                GET: "listModes",
+                POST: "switchMode"
             ]
         }
     	// hub
@@ -211,21 +212,21 @@
             ]
         }
 	    // GET device lists
-	    path("/:deviceType") {
+	    path("/devices/:deviceType") {
 		    action: [
 			    GET: "list"
 		    ]
 	    }
         // GET specific device info
         // PUT update the state of a device
-        path("/:deviceType/:id") {
+        path("/devices/:deviceType/:id") {
             action: [
             	GET: "list",
                 POST: "updateDevice"
             ]
         }
         // GET event lists
-        path("/:deviceType/:id/events") {
+        path("/devices/:deviceType/:id/events") {
         	action: [
             	GET: "listEvents"
             ]
@@ -248,11 +249,18 @@
     	result
 	}
 
-	def getMode(mode) {
-        log.debug mode.getProperties()
-		def themode = ["id" : mode.id, "name" : mode.name]
-    	log.debug "in getMode will return $themode"
-    	themode
+	def getMode(mode, explodedView = false) {
+    	def result = [:]
+        ["id", "name"].each {
+        	result << [(it) : mode."$it"]
+        }
+
+        if(explodedView) {
+        	["locationId"].each {
+            	result << [(it) : mode."$it"]
+            }
+        }
+    	result
 	}
 
 	def listLocation() {
@@ -283,10 +291,11 @@
 		def result = []
         def id = params.id
         if(id) {
-            location.hubs?.each {
-                if(it.id == id) {
-                    result << getHub(it, true)
-                }
+        	def hub = location.hubs?.find{it.id == id}
+            if(hub) {
+            	result << getHub(hub, true)
+            } else {
+            	httpError(404, "hub not found")
             }
         } else {
             location.hubs?.each {
@@ -301,10 +310,11 @@
         def modes = []
         def id = params.id
         if(id) {
-            location.modes?.each {
-                if(it.id == id) {
-                    modes << getMode(it, true)
-                }
+        	def themode = location.modes?.find{it.id == id}
+            if(themode) {
+            	modes << getMode(themode, true)
+            } else {
+            	httpError(404, "mode not found")
             }
         } else {
             location.modes?.each {
@@ -312,6 +322,17 @@
             }
         }
         modes
+    }
+
+    def switchMode() {
+    	def id = params.id
+        def mode = location.modes?.find{it.id == id}
+        if(mode) {
+        	location.setMode(mode.name)
+            render contentType: "text/html", status: 204, data: "No Content"
+        } else {
+        	httpError(404, "mode not found")
+        }
     }
 
     def list() {
