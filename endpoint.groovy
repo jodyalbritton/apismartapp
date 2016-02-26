@@ -211,6 +211,11 @@
                 GET: "listHubs"
             ]
         }
+        path("/devices") {
+            action: [
+                GET: "listDeviceTypes"
+            ]
+        }
 	    // GET device lists
 	    path("/devices/:deviceType") {
 		    action: [
@@ -281,8 +286,6 @@
 	}
 
 	def listLocation() {
-		log.debug "in listLocation, location: $location"
-
 		def result = [:]
         ["contactBookEnabled", "name", "temperatureScale", "zipCode"].each {
             result << [(it) : location."$it"]
@@ -297,14 +300,10 @@
     		hubs << getHub(it)
     	}
     	result << ["hubs" : hubs]
-
-    	log.debug "locations to return: $result"
-    	//render contentType: "application/json", statusCode: 200, data: groovy.json.JsonOutput.toJson(result)
         result
 	}
 
 	def listHubs() {
-		log.debug "in listHubs, hubs: $location.hubs"
         def id = params.id
         if(id) {
         	def hub = location.hubs?.find{it.id == id}
@@ -351,6 +350,14 @@
         }
     }
 
+    def listDeviceTypes() {
+        def results = []
+        settings.each {
+            results << it.key
+        }
+        results
+    }
+
     def listDevices() {
 		def type = params.deviceType
         if(!settings[type]) {
@@ -373,7 +380,6 @@
         if (!device) {
             httpError(404, "Device not found")
         } else {
-            log.debug device.getProperties()
             def events = device.events(max: 20)
             def result = events.collect{item(device, it)}
             result
@@ -381,7 +387,6 @@
     }
 
     private item(device, s) {
-        log.debug s.getProperties()
         device && s ? [device_id: device.id, label: device.displayName, name: s.name, value: s.value, date: s.date, stateChange: s.stateChange, eventSource: s.eventSource] : null
     }
 
@@ -412,7 +417,6 @@
         if(!device) {
         	httpError(404, "Device not found")
         } else {
-            log.debug "Executing command: $command on device: $device"
             device."$command"()
             render contentType: "text/html", status: 204, data: "No Content"
         }
@@ -427,7 +431,6 @@
 
         if(explodedView) {
     		def attrsAndVals = [:]
-            log.debug device.getProperties()
    			device.supportedAttributes?.each {
        			attrsAndVals << [(it.name) : device.currentValue(it.name)]
     		}
