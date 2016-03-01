@@ -89,6 +89,7 @@
         *
         **********************************************************************/
 
+        /*
         subscribe(switches, "switch", handleSwitchEvent)
         subscribe(dimmers, "level", handleSwitchLevelEvent)
         subscribe(motions, "motion", handleMotionEvent)
@@ -102,7 +103,7 @@
         subscribe(powers, "power", handlePowerEvent)
         subscribe(energys, "energy", handleEnergyEvent)
         subscribe(presence, "presence", handlePresenceEvent)
-
+        */
 
     }
 
@@ -115,6 +116,7 @@
     * created above. We will only handle events where the user has
     * authorized access to the device
     **********************************************************************/
+    /*
     def handleIlluminanceEvent(evt) {
         logField(evt) { it.toString() }
     }
@@ -167,7 +169,7 @@
     def handlePresenceEvent(evt) {
         logField(evt) { it.toString() }
     }
-
+    */
 
     /*********************************************************************
     * URL MAPPINGS
@@ -211,19 +213,17 @@
                 GET: "listHubs"
             ]
         }
+        // devices
         path("/devices") {
             action: [
                 GET: "listDeviceTypes"
             ]
         }
-	    // GET device lists
 	    path("/devices/:deviceType") {
 		    action: [
 			    GET: "listDevices"
 		    ]
 	    }
-        // GET specific device info
-        // PUT update the state of a device
         path("/devices/:deviceType/:id") {
             action: [
             	GET: "listDevices",
@@ -235,7 +235,6 @@
                 POST: "sendDeviceCommand"
             ]
         }
-        // GET event lists
         path("/devices/:deviceType/:id/events") {
         	action: [
             	GET: "listDeviceEvents"
@@ -255,36 +254,9 @@
         }
     }
 
-    // hub is non-null
-	def getHub(hub, explodedView = false) {
-		def result = [:]
-        ["id", "name"].each {
-            result << [(it) : hub."$it"]
-        }
-
-        if(explodedView) {
-            ["firmwareVersionString", "localIP", "localSrvPortTCP", "zigbeeEui", "zigbeeId"].each {
-                result << [(it) : hub."$it"]
-            }
-            result << ["type" : hub.type as String]
-        }
-    	result
-	}
-
-	def getMode(mode, explodedView = false) {
-    	def result = [:]
-        ["id", "name"].each {
-        	result << [(it) : mode."$it"]
-        }
-
-        if(explodedView) {
-        	["locationId"].each {
-            	result << [(it) : mode."$it"]
-            }
-        }
-    	result
-	}
-
+    /****************************
+    * Location Methods
+    ****************************/
 	def listLocation() {
 		def result = [:]
         ["contactBookEnabled", "name", "temperatureScale", "zipCode"].each {
@@ -295,16 +267,22 @@
         result << ["timeZone" : location.timeZone?.getDisplayName()]
         result << ["currentMode" : getMode(location.currentMode)]
 
+        // add hubs for this location to the result
     	def hubs = []
     	location.hubs?.each {
     		hubs << getHub(it)
     	}
     	result << ["hubs" : hubs]
+        log.debug "Returning LOCATION: $result"
         result
 	}
 
+    /****************************
+    * Hubs Methods
+    ****************************/
 	def listHubs() {
         def id = params.id
+        // if there is an id parameter, list only that hub. Otherwise list all hubs in location
         if(id) {
         	def hub = location.hubs?.find{it.id == id}
             if(hub) {
@@ -317,12 +295,35 @@
             location.hubs?.each {
                 result << getHub(it)
             }
+            log.debug "Returning HUBS: $result"
             result
         }
 	}
 
+    private getHub(hub, explodedView = false) {
+        def result = [:]
+        //put the id and name into the result
+        ["id", "name"].each {
+            result << [(it) : hub."$it"]
+        }
+
+        // if we want detailed information about this hub
+        if(explodedView) {
+            ["firmwareVersionString", "localIP", "localSrvPortTCP", "zigbeeEui", "zigbeeId"].each {
+                result << [(it) : hub."$it"]
+            }
+            result << ["type" : hub.type as String]
+        }
+        log.debug "Returning HUB: $result"
+        result
+    }
+
+    /****************************
+    * Modes Methods
+    ****************************/
     def listModes() {
         def id = params.id
+        // if there is an id parameter, list only that mode. Otherwise list all modes in location
         if(id) {
         	def themode = location.modes?.find{it.id == id}
             if(themode) {
@@ -331,18 +332,35 @@
             	httpError(404, "mode not found")
             }
         } else {
-        	def modes = []
+        	def result = []
             location.modes?.each {
-                modes << getMode(it)
+                result << getMode(it)
             }
-            modes
+            log.debug "Returning MODES: $result"
+            result
         }
+    }
+
+    private getMode(mode, explodedView = false) {
+        def result = [:]
+        ["id", "name"].each {
+            result << [(it) : mode."$it"]
+        }
+
+        if(explodedView) {
+            ["locationId"].each {
+                result << [(it) : mode."$it"]
+            }
+        }
+        log.debug "Returning MODE: $result"
+        result
     }
 
     def switchMode() {
     	def id = params.id
         def mode = location.modes?.find{it.id == id}
         if(mode) {
+            log.debug "Setting mode to $mode.name in location: $location.name"
         	location.setMode(mode.name)
             render contentType: "text/html", status: 204, data: "No Content"
         } else {
@@ -350,38 +368,113 @@
         }
     }
 
+    /****************************
+    * Routine Methods
+    ****************************/
+    def listRoutines() {
+        def id = params.id
+        def results = []
+        // if there is an id parameter, list only that routine. Otherwise list all routines in location
+        if(id) {
+            def routine = location.helloHome?.getPhrases().find{it.id == id}
+            def myRoutine = [:]
+            if(!routine) {
+                httpError(404, "Routine not found")
+            } else {
+                getRoutine(routine)
+            }
+        } else {
+            location.helloHome?.getPhrases().each { routine ->
+                results << getRoutine(routine)
+            }
+            log.debug "Returning ROUTINES: $results"
+            results
+        }
+    }
+
+    private getRoutine(routine) {
+        def result = [:]
+        ["id", "label"].each {
+            result << [(it) : routine."$it"]
+        }
+        log.debug "Returning ROUTINE: $result"
+        result
+    }
+
+    def executeRoutine() {
+        def id = params.id
+        def routine = location.helloHome?.getPhrases().find{it.id == id}
+        if(!routine) {
+            httpError(404, "Routine not found")
+        } else {
+            log.debug "Executing Routine: $routine.label in location: $location.name"
+            location.helloHome?.execute(routine.label)
+            render contentType: "text/html", status: 204, data: "No Content"
+        }
+    }
+
+    /****************************
+    * Device Methods
+    ****************************/
     def listDeviceTypes() {
         def results = []
         settings.each {
             results << it.key
         }
+        log.debug "Returning TYPES: $results"
         results
     }
 
     def listDevices() {
-		def type = params.deviceType
+        def type = params.deviceType
         if(!settings[type]) {
-        	httpError(405, "Method Not Allowed")
+            httpError(405, "Method Not Allowed")
         }
         def id = params.id
+        // if there is an id parameter, list only that device. Otherwise list all devices in location
         if(id) {
             def device = settings[type]?.find{it.id == id}
-        	deviceItem(device, true)
+            deviceItem(device, true)
         } else {
-			settings[type]?.collect{deviceItem(it, false)} ?: []
+            def result = []
+            result << settings[type]?.collect{deviceItem(it, false)}
+            log.debug "Returning DEVICES: $result"
+            result
         }
-	}
+    }
+
+    private deviceItem(device, explodedView) {
+        if (!device) return null
+        def results = [:]
+        ["id", "name", "displayName"].each {
+            results << [(it) : device."$it"]
+        }
+
+        if(explodedView) {
+            def attrsAndVals = [:]
+            device.supportedAttributes?.each {
+                attrsAndVals << [(it.name) : device.currentValue(it.name)]
+            }
+
+            results << ["attributes" : attrsAndVals]
+        }
+        log.debug "Returning DEVICE: $results"
+        results
+    }
 
     def listDeviceEvents() {
-    	def type = params.deviceType
+        def numEvents = 20
+        def type = params.deviceType
         def id = params.id
         def device = settings[type]?.find{it.id == id}
 
         if (!device) {
             httpError(404, "Device not found")
         } else {
-            def events = device.events(max: 20)
+            log.debug "Retrieving last $numEvents events"
+            def events = device.events(max: numEvents)
             def result = events.collect{item(device, it)}
+            log.debug "Returnings EVENTS: $result"
             result
         }
     }
@@ -394,91 +487,34 @@
         def type = params.deviceType
         def id = params.id
         def device = settings[type]?.find{it.id == id}
-        def commands = []
+        def result = []
         if(!device) {
             httpError(404, "Device not found")
         } else {
             device.supportedCommands?.each {
-                commands << ["command" : it.name, "params"  : [:]]
+                result << ["command" : it.name, "params"  : [:]]
             }
         }
-        commands
+        log.debug "Returning COMMANDS: $result"
+        result
     }
 
     def sendDeviceCommand() {
-    	def type = params.deviceType
+        def type = params.deviceType
         def id = params.id
-    	def command = request.JSON?.command
+        def command = request.JSON?.command
         if(!command) {
             httpError(404, "Device not found")
         }
 
         def device = settings[type]?.find{it.id == params.id}
         if(!device) {
-        	httpError(404, "Device not found")
+            httpError(404, "Device not found")
         } else {
+            log.debug "Executing command: $command on device: $device.displayName"
             device."$command"()
             render contentType: "text/html", status: 204, data: "No Content"
         }
-    }
-
-	def deviceItem(device, explodedView) {
-		if (!device) return null
-   		def results = [:]
-        ["id", "name", "displayName"].each {
-            results << [(it) : device."$it"]
-        }
-
-        if(explodedView) {
-    		def attrsAndVals = [:]
-   			device.supportedAttributes?.each {
-       			attrsAndVals << [(it.name) : device.currentValue(it.name)]
-    		}
-
-    		results << ["attributes" : attrsAndVals]
-        }
-    	results
-	}
-
-    def listRoutines() {
-        def id = params.id
-        def results = []
-        if(id) {
-            def routine = location.helloHome?.getPhrases().find{it.id == id}
-            def myRoutine = [:]
-            if(!routine) {
-                httpError(404, "Routine not found")
-            } else {
-                ["id", "label"].each {
-                    myRoutine << [(it) : routine."$it"]
-                }
-                myRoutine
-            }
-        } else {
-            location.helloHome?.getPhrases().each { routine ->
-                def myRoutine = [:]
-                ["id", "label"].each {
-                    myRoutine << [(it) : routine."$it"]
-                }
-                results << myRoutine
-            }
-            results
-        }
-    }
-
-    def executeRoutine() {
-    	def id = params.id
-        def routine = location.helloHome?.getPhrases().find{it.id == id}
-        if(!routine) {
-        	httpError(404, "Routine not found")
-        } else {
-        	location.helloHome?.execute(routine.label)
-            render contentType: "text/html", status: 204, data: "No Content"
-        }
-    }
-
-    private device(it, type) {
-        it ? [id: it.id, label: it.label, type: type] : null
     }
 
     /*********************************************************************
@@ -491,8 +527,10 @@
     * url for sending updates.
     *
     **********************************************************************/
+    /*
     private logField(evt) {
         httpPostJson(uri: "#####URI#####",   body:[device: evt.deviceId, name: evt.name, value: evt.value, date: evt.isoDate, unit: evt.unit]) {
             log.debug evt.name+" Event data successfully posted"
         }
     }
+    */
