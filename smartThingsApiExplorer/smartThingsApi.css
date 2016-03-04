@@ -1,0 +1,18 @@
+/* CSS declarations go here */
+
+
+#responseBody {
+	padding: 10px;
+	background-color: #E8E8E8;
+	margin-top: 25px;
+	border-radius: 12px;
+    border: 2px solid darkgrey;
+    padding: 20px; 
+
+}
+
+#query {
+	width: 500px;
+}
+
+

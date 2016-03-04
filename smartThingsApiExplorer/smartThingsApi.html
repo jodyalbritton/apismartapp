@@ -1,0 +1,32 @@
+<head>
+  <title>SmartThings API Explorer</title>
+</head>
+
+<body>
+  <h1>SmartThings API Explorer</h1>
+  	<div class="container">
+  		<form class="query">
+          <input type="text" name="text" id="query" value="devices"/>
+          <button name="submit" id="clicker">Submit</button> 
+   		</form>
+  	</div>
+	{{> main}}
+	<div class="description">
+		<h4> Root Endpoints </h4>
+		<ul>
+			<li> devices </li>
+			<li> hubs </li>
+			<li> location </li>
+			<li> routines </li>
+		</ul>
+	</div>
+</body>
+
+
+
+<template name="main">
+	<div id="responseBody" class="pre code">
+	 {{theResult}}
+	</div>
+</template>
+
