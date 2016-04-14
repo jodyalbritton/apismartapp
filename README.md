@@ -14,8 +14,6 @@ This todo list is a running tally of what needs to be addressed. Please add to t
 ## Installation
 TODO
 
-## API Definition
-See https://smartthings.atlassian.net/wiki/display/~dave/Developer+API+Endpoint+Design for endpoint design.
 
 ## API Explorer Install
  - Latest version of Node
