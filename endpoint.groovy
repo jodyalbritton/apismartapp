@@ -43,28 +43,14 @@
             input "batteries", "capability.battery", title: "Which Batteries?", multiple: true, required: false
             input "powers", "capability.powerMeter", title: "Power Meters", required:false, multiple: true
             input "energys", "capability.energyMeter", title: "Energy Meters", required:false, multiple: true
+            input "dioxides", "capability.carbonDioxideMeasurement", title: "Co2 Measurement", required: false, multiple: true
+            input "signals", "capability.signalStrength", title: "Signal Strength", required: false, multiple: true
+            input "leaks", "capability.waterSensor", title: "Water Detection", required: false, multiple: true
+            input "sounds", "capability.soundPressureLevel", title: "Sound Pressure", required: false, multiple: true
+            input "colors", "capability.colorControl", title: "Color", required: false, multiple: true
+            input "colorTemperatures", "capability.colorTemperature", title: "Color Temperature", required: false, multiple: true
+            
         }
-
-        /*********************************************************************
-        * Create storage for values that will be later evaluated. We need to
-        * only expose the parts of the API that have been authorized by the
-        * user
-        **********************************************************************/
-
-        appSetting "switches"
-        appSetting "dimmers"
-        appSetting "thermostats"
-        appSetting "motions"
-        appSetting "accelerations"
-        appSetting "contacts"
-        appSetting "illuminants"
-        appSetting "temperatures"
-        appSetting "humidities"
-        appSetting "presences"
-        appSetting "locks"
-        appSetting "batteries"
-        appSetting "powers"
-        appSetting "energys"
     }
 
 
@@ -78,19 +64,7 @@
     }
 
     def initialize() {
-
-        /*********************************************************************
-        * SUBSCRIPTIONS
-        *
-        * TODO: Case structure to evalute true/false values from the settings
-        * created above. We will only subscribe to those devices where the
-        * user has authorized access
-        *
-        *
-        **********************************************************************/
-
-        /*
-        subscribe(switches, "switch", handleSwitchEvent)
+	subscribe(switches, "switch", handleSwitchEvent)
         subscribe(dimmers, "level", handleSwitchLevelEvent)
         subscribe(motions, "motion", handleMotionEvent)
         subscribe(accelerations, "acceleration", handleAccelerationEvent)
@@ -98,27 +72,22 @@
         subscribe(illuminants, "illuminance", handleIlluminanceEvent)
         subscribe(temperatures, "temperature", handleTemperatureEvent)
         subscribe(humidities, "humidity", handleHumidityEvent)
-        subscribe(lock, "lock", handleDoorLockEvent)
+        subscribe(locks, "locks", handleDoorLockEvent)
         subscribe(batteries, "battery", handleBatteryEvent)
         subscribe(powers, "power", handlePowerEvent)
         subscribe(energys, "energy", handleEnergyEvent)
-        subscribe(presence, "presence", handlePresenceEvent)
-        */
-
+        subscribe(presences, "presence", handlePresenceEvent)
+        subscribe(dioxides, "dioxide", handleDioxideEvent)
+        subscribe(signals, "signal", handleSignalEvent)
+        subscribe(leaks, "leak", handleLeakEvent)
+        subscribe(sounds, "sound", handleSoundEvent)
+        subscribe(colors, "color", handleColorEvent)
+        subscribe(colorTemperatures, "colorTemperature", handleColorTemperaturesEvent)
     }
-
-
-
-    /*********************************************************************
-    * EVENT HANDLERS
-    *
-    * TODO: Case structure to evalute true/false values from the settings
-    * created above. We will only handle events where the user has
-    * authorized access to the device
-    **********************************************************************/
-    /*
+	
+    
     def handleIlluminanceEvent(evt) {
-        logField(evt) { it.toString() }
+    	logField(evt) { it.toString() }
     }
 
     def handleHumidityEvent(evt) {
@@ -169,23 +138,37 @@
     def handlePresenceEvent(evt) {
         logField(evt) { it.toString() }
     }
-    */
-
-    /*********************************************************************
-    * URL MAPPINGS
-    *
-    * TODO: Case structure to evalute true/false values from the settings
-    * created above. We will only expose endpoints that have been
-    * authorized by the user.
-    *
-    * We also need to create a "/devices" path that will iterate through
-    * the map of allowed device types and allow the developer to discover
-    * the available endpoints via the api.
-    **********************************************************************/
+    
+    def handleDioxideEvent(evt) {
+        logField(evt) { it.toString() }
+    }
+    
+    def handleLeakEvent(evt) {
+        logField(evt) { it.toString() }
+    }
+    
+    def handleSignalEvent(evt) {
+        logField(evt) { it.toString() }
+    }
+    
+    def handleSoundEvent(evt) {
+        logField(evt) { it.toString() }
+    }
+    
+    def handleColorEvent(evt) {
+        logField(evt) { it.toString() }
+    }
+    
+    def handleColorTemperatureEvent(evt) {
+        logField(evt) { it.toString() }
+    }
+    
+    
+    
 
     mappings {
         // location
-    	path("/location") {
+    	path("/locations") {
     		action: [
         		GET: "listLocation"
         	]
@@ -198,8 +181,7 @@
         }
         path("/modes/:id") {
             action: [
-                GET: "listModes",
-                POST: "switchMode"
+                get: "switchMode"
             ]
         }
     	// hub
@@ -210,31 +192,40 @@
     	}
         path("/hubs/:id") {
             action: [
-                GET: "listHubs"
+                GET: "getHub"
             ]
         }
         // devices
-        path("/devices") {
-            action: [
-                GET: "listDeviceTypes"
-            ]
-        }
-	    path("/devices/:deviceType") {
+       
+	    path("/devices") {
 		    action: [
 			    GET: "listDevices"
 		    ]
 	    }
-        path("/devices/:deviceType/:id") {
+        path("/devices/:id") {
             action: [
             	GET: "listDevices",
             ]
         }
-        path("/devices/:deviceType/:id/commands") {
+        path("/devices/:id/commands") {
             action: [
-                GET: "listDeviceCommands",
-                POST: "sendDeviceCommand"
+                GET: "listDeviceCommands"
             ]
         }
+       
+        
+        path("/devices/:id/:command"){
+        	action: [
+         		GET: "sendDeviceCommand"   
+            ]
+        }
+        
+        path("/devices/:id/:command/:secondary"){
+        	action: [
+         		GET: "sendDeviceCommandSecondary"   
+            ]
+        }
+        
         path("/devices/:deviceType/:id/events") {
         	action: [
             	GET: "listDeviceEvents"
@@ -426,18 +417,14 @@
     }
 
     def listDevices() {
-        def type = params.deviceType
-        if(!settings[type]) {
-            httpError(405, "Method Not Allowed")
-        }
         def id = params.id
         // if there is an id parameter, list only that device. Otherwise list all devices in location
         if(id) {
-            def device = settings[type]?.find{it.id == id}
+            def device = allDevices?.find{it.id == id}
             deviceItem(device, true)
         } else {
             def result = []
-            result << settings[type]?.collect{deviceItem(it, false)}
+            result << allDevices.collect{deviceItem(it, false)}
             log.debug "Returning DEVICES: $result"
             result
         }
@@ -466,7 +453,7 @@
         def numEvents = 20
         def type = params.deviceType
         def id = params.id
-        def device = settings[type]?.find{it.id == id}
+        def device = allDevices?.find{it.id == id}
 
         if (!device) {
             httpError(404, "Device not found")
@@ -478,15 +465,18 @@
             result
         }
     }
-
+	private getAllDevices() {
+    //contactSensors + presenceSensors + temperatureSensors + accelerationSensors + waterSensors + lightSensors + humiditySensors
+    ([] + switches + motions + locks + alarms + thermostats + medias + musics + speeches + colors + valves + contacts + waters + presences + temperatures + illuminants + accelerations + leaks)?.findAll()?.unique { it.id }
+}
     private item(device, s) {
         device && s ? [device_id: device.id, label: device.displayName, name: s.name, value: s.value, date: s.date, stateChange: s.stateChange, eventSource: s.eventSource] : null
     }
 
     def listDeviceCommands() {
-        def type = params.deviceType
+     
         def id = params.id
-        def device = settings[type]?.find{it.id == id}
+        def device = allDevices?.find{it.id == id}
         def result = []
         if(!device) {
             httpError(404, "Device not found")
@@ -500,37 +490,60 @@
     }
 
     def sendDeviceCommand() {
-        def type = params.deviceType
+        
+  
         def id = params.id
-        def command = request.JSON?.command
+         def device = allDevices?.find{it.id == id}
+        def command = params.command
+        def secondary_command = params.level
+        
+        device."$command"()
         if(!command) {
             httpError(404, "Device not found")
         }
-
-        def device = settings[type]?.find{it.id == params.id}
         if(!device) {
             httpError(404, "Device not found")
         } else {
             log.debug "Executing command: $command on device: $device.displayName"
-            device."$command"()
-            render contentType: "text/html", status: 204, data: "No Content"
+           
+            
         }
+        
+        
     }
+    
+    def sendDeviceCommandSecondary() {
+        
+  
+        def id = params.id
+        def device = allDevices?.find{it.id == id}
+        def command = params.command
+        def secondary = params.secondary.toInteger()
+        
+        device."$command"(secondary)
+        if(!command) {
+            httpError(404, "Device not found")
+        }
+        if(!device) {
+            httpError(404, "Device not found")
+        } else {
+            log.debug "Executing with secondary command: $command $secondary on device: $device.displayName"
+           
+            
+        }
+        
+        
+    }
+    
+        // Callback to some url 
+    private logField(evt, Closure c) {
 
-    /*********************************************************************
-    * CALLBACK TO URL
-    *
-    * TODO: We could call back to a url that is built in to the smartapp
-    * and create method to allow subscription to events. If websockets
-    * are available that would be the optimal method. Otherwise we could
-    * create a setting that would allow the developer to specify a callback
-    * url for sending updates.
-    *
-    **********************************************************************/
-    /*
-    private logField(evt) {
-        httpPostJson(uri: "#####URI#####",   body:[device: evt.deviceId, name: evt.name, value: evt.value, date: evt.isoDate, unit: evt.unit]) {
+        log.debug "The souce of this event is ${evt.source} and it was ${evt.id}"
+
+        httpPostJson(uri: "###### YOUR CALLBACK URL ########",   body:[source: "smart_things", device: evt.deviceId, eventType: evt.name, value: evt.value, event_date: evt.isoDate, units: evt.unit, event_source: evt.source, state_changed: evt.isStateChange()]) {
             log.debug evt.name+" Event data successfully posted"
-        }
-    }
-    */
+    	}
+   }
+    
+    
+
