@@ -64,7 +64,7 @@
     }
 
     def initialize() {
-	subscribe(switches, "switch", handleSwitchEvent)
+		subscribe(switches, "switch", handleSwitchEvent)
         subscribe(dimmers, "level", handleSwitchLevelEvent)
         subscribe(motions, "motion", handleMotionEvent)
         subscribe(accelerations, "acceleration", handleAccelerationEvent)
@@ -82,6 +82,7 @@
         subscribe(leaks, "leak", handleLeakEvent)
         subscribe(sounds, "sound", handleSoundEvent)
         subscribe(colors, "color", handleColorEvent)
+        subscribe(thermostats, "coolingSetPoint", handleThermCoolPoint)
         subscribe(colorTemperatures, "colorTemperature", handleColorTemperaturesEvent)
     }
 	
@@ -95,6 +96,10 @@
     }
 
     def handleTemperatureEvent(evt) {
+        logField(evt) { it.toString() }
+    }
+    
+    def handleThermCoolPoint(evt) {
         logField(evt) { it.toString() }
     }
 
@@ -226,7 +231,7 @@
             ]
         }
         
-        path("/devices/:deviceType/:id/events") {
+        path("/devices/:id/events") {
         	action: [
             	GET: "listDeviceEvents"
             ]
@@ -451,7 +456,6 @@
 
     def listDeviceEvents() {
         def numEvents = 20
-        def type = params.deviceType
         def id = params.id
         def device = allDevices?.find{it.id == id}
 
@@ -467,10 +471,33 @@
     }
 	private getAllDevices() {
     //contactSensors + presenceSensors + temperatureSensors + accelerationSensors + waterSensors + lightSensors + humiditySensors
-    ([] + switches + motions + locks + alarms + thermostats + medias + musics + speeches + colors + valves + contacts + waters + presences + temperatures + illuminants + accelerations + leaks)?.findAll()?.unique { it.id }
+    ([] + switches
+    	+ dimmers
+    	+ motions
+        + accelerations
+        + contacts
+        + illuminants
+        + temperatures
+        + humidities
+        + locks 
+        + alarms
+        + batteries
+        + thermostats 
+        + medias 
+        + musics 
+        + speeches 
+        + colors 
+        + valves
+        + waters 
+        + presences 
+        + leaks)?.findAll()?.unique { it.id }
 }
     private item(device, s) {
-        device && s ? [device_id: device.id, label: device.displayName, name: s.name, value: s.value, date: s.date, stateChange: s.stateChange, eventSource: s.eventSource] : null
+        device && s ? [device_id: device.id, 
+        			   label: device.displayName, 
+                       name: s.name, value: s.value, 
+                       date: s.date, stateChange: s.stateChange, 
+                       eventSource: s.eventSource] : null
     }
 
     def listDeviceCommands() {
@@ -540,10 +567,11 @@
 
         log.debug "The souce of this event is ${evt.source} and it was ${evt.id}"
 
-        httpPostJson(uri: "###### YOUR CALLBACK URL ########",   body:[source: "smart_things", device: evt.deviceId, eventType: evt.name, value: evt.value, event_date: evt.isoDate, units: evt.unit, event_source: evt.source, state_changed: evt.isStateChange()]) {
+	    httpPostJson(uri: "#####SEND EVENTS TO YOUR ENDPOINT######",   body:[source: "smart_things", device: evt.deviceId, eventType: evt.name, value: evt.value, event_date: evt.isoDate, units: evt.unit, event_source: evt.source, state_changed: evt.isStateChange()]) {
             log.debug evt.name+" Event data successfully posted"
     	}
    }
     
     
+
 
