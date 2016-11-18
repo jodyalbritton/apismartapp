@@ -80,8 +80,6 @@ def initialize() {
     subscribe(leaks, "leak", handleLeakEvent)
     subscribe(sounds, "sound", handleSoundEvent)
     subscribe(colors, "color", handleColorEvent)
-    subscribe(thermostats, "coolingSetPoint", handleThermCoolPoint)
-    subscribe(colorTemperatures, "colorTemperature", handleColorTemperaturesEvent)
 }
 
 def handleIlluminanceEvent(evt) {
@@ -424,7 +422,7 @@ def listDevices() {
         def result = []
         result << allDevices.collect{deviceItem(it, false)}
         log.debug "Returning DEVICES: $result"
-        result
+        result[0]
     }
 }
 
@@ -465,7 +463,9 @@ def listDeviceEvents() {
 
 private getAllDevices() {
     //contactSensors + presenceSensors + temperatureSensors + accelerationSensors + waterSensors + lightSensors + humiditySensors
-    ([] + switches
+
+     def dev_list =
+     	([] + switches
         + dimmers
         + motions
         + accelerations
@@ -485,6 +485,8 @@ private getAllDevices() {
         + waters 
         + presences 
         + leaks)?.findAll()?.unique { it.id }
+        
+        return dev_list
 }
 
 private item(device, s) {
