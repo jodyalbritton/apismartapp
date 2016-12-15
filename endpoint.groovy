@@ -203,6 +203,13 @@ mappings {
             GET: "listDevices",
         ]
     }
+    
+    path("/devices/:id/events") {
+        action: [
+            GET: "listDeviceEvents"
+        ]
+    }
+    
     path("/devices/:id/commands") {
         action: [
             GET: "listDeviceCommands"
@@ -222,11 +229,6 @@ mappings {
         ]
     }
     
-    path("/devices/:id/events") {
-        action: [
-            GET: "listDeviceEvents"
-        ]
-    }
     // Routines
     path("/routines") {
         action: [
